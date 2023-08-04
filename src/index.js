@@ -34,21 +34,14 @@ searchForm.addEventListener("submit", async (e) => {
 
   try {
     const images = await fetchImages(searchQuery, currentPage);
-    if (images.length === 0) {
-      Notiflix.Notify.warning(
-        "Sorry, there are no images matching your search query. Please try again."
-      );
-      return;
+     
+        if (images.hits.length > 0) {
+      renderImages(images);
+      Notiflix.Notify.success(`Hooray! We found ${images.totalHits} images.`);
+    } else {
+      Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
     }
-
-    renderImages(images);
-
-    // Show the load more button
     loadMoreBtn.style.display = "block";
-
-    // Show the totalHits notification
-    Notiflix.Notify.success(`Hooray! We found ${images.totalHits} images.`);
-
   } catch (error) {
     console.error("Error fetching images:", error);
     Notiflix.Notify.failure("Failed to fetch images. Please try again later.");
@@ -84,6 +77,11 @@ async function fetchImages(searchQuery, page) {
 }
 
 function renderImages(images) {
+  if (images.totalHits === 0) {
+    Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
+    return;
+  }
+
   images.hits.forEach((image) => {
     const card = createImageCard(image);
     const link = document.createElement("a");
@@ -92,12 +90,15 @@ function renderImages(images) {
     gallery.appendChild(link);
   });
 
- if (gallery.children.length >= images.total.hits) {
-  loadMoreBtn.style.display = "none";
-  Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
-}
+    if (gallery.children.length >= images.totalHits) {
+    loadMoreBtn.style.display = "none";
+    Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
+  } else {
+    loadMoreBtn.style.display = "block";
+  }
   initLightbox();
 }
+
 
 
 function createImageCard(image) {
