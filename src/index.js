@@ -13,17 +13,18 @@ const loadMoreBtn = document.querySelector(".load-more");
 
 let currentPage = 1;
 let currentQuery = "";
+let isLoading = false;
 
-function initLightbox() {
-  const lightbox = new SimpleLightbox(".gallery a", {
-    captions: true,
-    captionsData: "alt",
-    captionDelay: 250,
-  });
-}
+const lightbox = new SimpleLightbox(".gallery a", {
+  captions: true,
+  captionsData: "alt",
+  captionDelay: 250,
+});
 
+searchForm.addEventListener("submit", handleSearch);
+loadMoreBtn.addEventListener("click", handleLoadMore);
 
-searchForm.addEventListener("submit", async (e) => {
+async function handleSearch(e) {
   e.preventDefault();
   const searchQuery = e.target.elements.searchQuery.value.trim();
   if (!searchQuery) return;
@@ -31,25 +32,34 @@ searchForm.addEventListener("submit", async (e) => {
   currentQuery = searchQuery;
   currentPage = 1;
   gallery.innerHTML = "";
+  loadMoreBtn.style.display = "none";
 
   try {
+    isLoading = true;
     const images = await fetchImages(searchQuery, currentPage);
-     
-        if (images.hits.length > 0) {
+
+    if (images.hits.length > 0) {
       renderImages(images);
       Notiflix.Notify.success(`Hooray! We found ${images.totalHits} images.`);
+      if (images.totalHits > ITEMS_PER_PAGE) {
+        loadMoreBtn.style.display = "block";
+      }
     } else {
       Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
     }
-    loadMoreBtn.style.display = "block";
   } catch (error) {
     console.error("Error fetching images:", error);
     Notiflix.Notify.failure("Failed to fetch images. Please try again later.");
+  } finally {
+    isLoading = false;
   }
-});
+}
 
-loadMoreBtn.addEventListener("click", async () => {
+async function handleLoadMore() {
+  if (isLoading) return;
+
   try {
+    isLoading = true;
     currentPage += 1;
     const images = await fetchImages(currentQuery, currentPage);
     renderImages(images);
@@ -57,8 +67,10 @@ loadMoreBtn.addEventListener("click", async () => {
   } catch (error) {
     console.error("Error fetching more images:", error);
     Notiflix.Notify.failure("Failed to load more images. Please try again later.");
+  } finally {
+    isLoading = false;
   }
-});
+}
 
 async function fetchImages(searchQuery, page) {
   const response = await axios.get(BASE_URL, {
@@ -90,27 +102,25 @@ function renderImages(images) {
     gallery.appendChild(link);
   });
 
-    if (gallery.children.length >= images.totalHits) {
+  if (gallery.children.length >= images.totalHits) {
     loadMoreBtn.style.display = "none";
     Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
   } else {
     loadMoreBtn.style.display = "block";
   }
-  initLightbox();
+  lightbox.refresh();
 }
-
-
 
 function createImageCard(image) {
   const card = document.createElement("div");
   card.classList.add("photo-card");
 
-    const img = document.createElement("img");
-    img.classList.add("image")
+  const img = document.createElement("img");
+  img.classList.add("image");
   img.src = image.webformatURL;
   img.alt = image.tags;
-    img.loading = "lazy";
-    
+  img.loading = "lazy";
+
   card.appendChild(img);
 
   const infoDiv = document.createElement("div");
@@ -135,3 +145,4 @@ function scrollToNextGroup() {
     behavior: "smooth",
   });
 }
+
